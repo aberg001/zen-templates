@@ -19,15 +19,9 @@ template
  * interpolations) together. 
  */
 element_desc
-  = elem:element_def '>'? '{' interp:interpolation '}'
-    { return function (i_, d_) { 
-        return elem(interp, d_); }; }
-  / elem:element_def '>' child:element_desc
+  = elem:element_def ( '>' / & '{' ) child:element_desc
     { return function (i_, d_) { 
         return elem(child, d_); }; }
-  / elem:element_def '+{' interp:interpolation '}'
-    { return function (i_, d_) { 
-        return elem(null, d_) + interp(null, data); }; }
   / elem:element_def '+' sibling:element_desc
     { return function (i_, d_) { 
         return elem(null, d_) + sibling(null, d_); }; }
@@ -43,7 +37,9 @@ element_desc
  * template is expanding over.
  */
 element_def  
-  = name:element_name mods:element_modifier *
+  = '{' interp:interpolation '}'
+    { return interp; }
+  / name:element_name mods:element_modifier *
     { 
       var id = '',
           cls = '',
@@ -99,7 +95,7 @@ interpolation
         for (i = 0; i < matches.length; ++i) {
           result += d_[matches[i][0]] + matches[i][1];
         }
-        return i_?i_(null, d_):'' + result;
+        return result + (i_ ? i_(null, d_) : '');
       }
     }
 
