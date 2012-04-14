@@ -3,12 +3,13 @@
  */
 
 {
-  data = { foo: 1 };
+  data = { foo: 1, a: 'hi', b: 'there' };
+  function L(a) {console.log(a)}
 }
 
-start
+start 
   = fn:template
-    { return fn('', data); }
+    { return fn(null, data); }
 
 template
   = element_desc
@@ -18,21 +19,21 @@ template
  * interpolations) together. 
  */
 element_desc
-  = elem:element_def '>{' interp:interpolation '}'
-    { return function () { 
-        return elem(interp, data); }; }
+  = elem:element_def '>'? '{' interp:interpolation '}'
+    { return function (i_, d_) { 
+        return elem(interp, d_); }; }
   / elem:element_def '>' child:element_desc
-    { return function () { 
-        return elem(child, data); }; }
+    { return function (i_, d_) { 
+        return elem(child, d_); }; }
   / elem:element_def '+{' interp:interpolation '}'
-    { return function () { 
-        return elem(null, data) + interp(null, data); }; }
+    { return function (i_, d_) { 
+        return elem(null, d_) + interp(null, data); }; }
   / elem:element_def '+' sibling:element_desc
-    { return function () { 
-        return elem(null, data) + sibling(null, data); }; }
+    { return function (i_, d_) { 
+        return elem(null, d_) + sibling(null, d_); }; }
   / elem:element_def
-    { return function () { 
-        return elem(); }; }
+    { return function (i_, d_) { 
+        return elem(i_, d_); }; }
 
 /*
  * element_def is where we apply all the element modifiers to the
@@ -47,7 +48,6 @@ element_def
       var id = '',
           cls = '',
           attr = '',
-          txt = function () { return ''; },
           i, mod, val;
       for (i = 0; i < mods.length; ++i) {
         mod = mods[i][0];
@@ -56,16 +56,14 @@ element_def
           id = val;
         } else if (mod === 'class') {
           cls += (cls ? ' ' : '') + val;
-        } else if (mod === 'literal') {
-          txt = (function (told) { return function () { return told() + val; } })(txt);
         } else if (mod === 'attr') {
           attr += ' ' + val + '=' + mods[i][2];
         }
       }
       attr += id ? ' id="'+id+'"' : '';
       attr += cls ? ' class="'+cls+'"' : '';
-      return function (insert, data) { 
-        return '<'+name+attr+'>'+(insert?insert():'')+txt()+'</'+name+'>'; 
+      return function (i_, d_) { 
+        return '<' + name + attr + '>' + (i_ ? i_(null, d_) : '') + '</' + name + '>'; 
       }; 
     }
 
@@ -78,8 +76,8 @@ element_modifier
     { return ['attr', name, text]; }
   / '*' count:int 
     { return ['repeat', count]; }
-  / '{' interp:interpolation '}'
-    { return ['interp', interp]; }
+//  / '{' interp:interpolation '}'
+//    { return ['interp', interp]; }
   / '*' ref:js_ref
     { return ['repeat_ref', ref]; }
   / '=' ref:js_ref
@@ -96,12 +94,12 @@ element_name
 interpolation
   = pre:interpolation_no_match matches:(interpolation_value interpolation_no_match)*
     { 
-      return function (child, data) {
+      return function (i_, d_) {
         var result = pre, i;
         for (i = 0; i < matches.length; ++i) {
-          result += data[matches[i][0]] + matches[i][1];
+          result += d_[matches[i][0]] + matches[i][1];
         }
-        return child?child(null, data):'' + result;
+        return i_?i_(null, d_):'' + result;
       }
     }
 
