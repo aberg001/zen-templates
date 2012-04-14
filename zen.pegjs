@@ -20,8 +20,13 @@ template
  */
 element_desc
   = elem:element_def ( '>' / & '{' ) child:element_desc
-    { return function (i_, d_) { 
-        return elem(child, d_); }; }
+    { 
+      return function (i_, d_) { 
+        return elem(function (i__, d__) {
+            return (i_ ? i_(null, d__) : '') + child(i__, d__);
+        }, d_); 
+      }; 
+    }
   / elem:element_def '+' sibling:element_desc
     { return function (i_, d_) { 
         return elem(null, d_) + sibling(null, d_); }; }
@@ -39,6 +44,8 @@ element_desc
 element_def  
   = '{' interp:interpolation '}'
     { return interp; }
+  / '(' elem:element_desc ')'
+    { return elem; }
   / name:element_name mods:element_modifier *
     { 
       var id = '',
@@ -144,4 +151,3 @@ xml_elem
 xml_attr_val
   = chars:[-_0-9a-zA-Z]+ 
     { return chars.join(''); }
-
