@@ -20,9 +20,6 @@ var zenTemplate;
                     '{' : 'OPEN_BRACKET',
                     '}' : 'CLOSE_BRACKET',
                     '=' : 'EQUALS',
-                    'h' : 'LETTER_H',
-                    'u' : 'LETTER_U',
-                    'j' : 'LETTER_J' },
                 op = function (ch) {
                     tokens.push([ops[ch]]);
                 },
@@ -47,6 +44,10 @@ var zenTemplate;
                     word = rest.match(/^[^\]]*/);
                     literal(word[0]);
                     str = rest.substr(word[0].length);
+                } else if (first === '"') {
+                    word = rest.match(/^[^"]*/);
+                    literal(word[0]);
+                    str = rest.substr(word[0].length + 1);
                 } else if (word = str.match(/^[-_0-9a-zA-Z/+)) {
                     literal(word[0]);
                     str = rest.substr(word[0].length);
@@ -54,8 +55,11 @@ var zenTemplate;
                     // TODO: throw the right kind of thing here.
                     throw 'SYNTAX ERROR';
                 }
+            }
+            tokens.push(['END']);
         },
         matchTokens = function () {
+            arguments.length and arguments[i]
         },
         consume = function (count) {
             var i;
@@ -64,8 +68,9 @@ var zenTemplate;
             }
         },
         parseTemplate = function (tokens) {
-            var sub;
-            if (matchTokens('OPEN_BRACKET', 'LIT', 'CLOSE_BRACKET')) {
+            var sub, match;
+            if (match = matchTokens('OPEN_BRACKET', 'LIT', 'CLOSE_BRACKET')) {
+                sub = 
             }
             var result = parseElement(tokens);
             while (tokens[0][0] === 'op' &&
@@ -125,28 +130,27 @@ var zenTemplate;
   * tokenizer built out of regular expressions.
   * 
   *
-  * template := element { '>' element | '+' element | '|' filter }
-  *     | '{' /^[^}]$/ '}'             ; literal text
-  *     | js-ref                       ; a value from data
-  *     | template-ref                 ; call a template
+  * template := element { '>' element | '+' element }
+  *     | literal-text
+  *     | js-ref
+  *     | template-ref
+  *
+  * literal-text := '{' /^[^}]$/ '}' opt-filter
   *
   * template-ref := '&' js-symbol { modifier }
   *
   * element := xml-symbol { modifier }
   *     | '(' template ')'             ; grouping
   *
-  * filter : 'h'                       ; HTML escape
-  *     | 'u'                          ; URL escape
-  *     | 'j'                          ; JSON escape
+  * opt-filter : '|' ( 'h' | 'u' | 'j' ) 
   *
   * modifier := '.' xml-attr-symbol    ; add a class name
   *     | '#' attr-or-ref              ; add an id
   *     | '[' attr-defn { ' ' attr-defn } ']'
-  *     | '*' multiplier
+  *     | '*' multiplier               ; repeat it some times
   *
-  * attr-defn := xml-attr-symbol [ '=' ( quoted-literal 
-  *                                    | simple-literal
-  *                                    | js-ref ) ]
+  * attr-defn := xml-attr-symbol [ '=' 
+  *          ( quoted-literal | simple-literal | js-ref ) ]
   *
   * multiplier := /^[0-9]+$/           ; repeat N times
   *     | js-ref                       ; repeat over data
@@ -158,7 +162,7 @@ var zenTemplate;
   *
   * simple-literal := /^[^ \]]+/
   *
-  * js-ref := '$' js-symbol
+  * js-ref := '$' js-symbol opt-filter
   *
   * js-symbol := /^[a-zA-Z][a-zA-Z0-9_]*$/ { // }
   *
@@ -171,6 +175,9 @@ var zenTemplate;
   *   '>' : Add a child element
   *   '+' : Add a sibling element
   *   '|' : Add an output filter
+  *      'h' : html escape
+  *      'u' : url escape
+  *      'j' : json escape
   *   '()' : Group elements
   *   '.' : Add class to element
   *   '#' : Add ID to element
