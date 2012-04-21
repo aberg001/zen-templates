@@ -3,8 +3,9 @@
  */
 
 {
-  data = { foo: 1, a: 'hi', b: 'there' };
-  function L(a) {console.log(a)}
+  data = { foo:['C','D','E'], a:'hi', b:'there' };
+  templates = { test:function (i_, d_) { return 'test('+i_(null,d_)+d_+')'; } };
+  function L(a) {console && console.log(a)}
 }
 
 start 
@@ -15,21 +16,47 @@ template
   = element_desc
 
 /*
- * element_desc is where we combine nodes (including occasionally text
- * interpolations) together. 
+ * element_desc is where we combine nodes and things together. 
  */
 element_desc
+  /*
+   * Add a child node.  A text interpolation is a kind of child node.
+   */
   = elem:element_def ( '>' / & '{' ) child:element_desc
     { 
       return function (i_, d_) { 
         return elem(function (i__, d__) {
-            return (i_ ? i_(null, d__) : '') + child(i__, d__);
+          return (i_ ? i_(null, d__) : '') + child(i__, d__);
         }, d_); 
       }; 
     }
+  /*
+   * Insert a template expansion as a child.  Call the template,
+   * sending it either the same data as current, or expand it for a
+   * slot in the current object.  If the slot contains an array, then
+   * expand it for each element in the array.
+   */
+  / elem:element_def '>' ? '&' template:js_ref ( '(' field:js_ref ')' )?
+    { 
+      return function (i_, d_) {
+        return elem(function (i__, d__) {
+          field = field ? d__[field] : d__;
+          return (i_ ? i_(null, d__) : '') + child(i__, d__);
+        }, d_); 
+      }; 
+    }
+  /*
+   * Insert a sibling.  Puts the right hand element immediately after
+   * the left hand one.
+   */
   / elem:element_def '+' sibling:element_desc
     { return function (i_, d_) { 
         return elem(null, d_) + sibling(null, d_); }; }
+  /*
+   * Expand a template as a sibling.
+   */
+  /*
+   * This is the rightmost element in the tree.  Nothing magical here.
   / elem:element_def
     { return function (i_, d_) { 
         return elem(i_, d_); }; }
@@ -51,6 +78,8 @@ element_def
       var id = '',
           cls = '',
           attr = '',
+          repeat = 1,
+          loop = null,
           i, mod, val;
       for (i = 0; i < mods.length; ++i) {
         mod = mods[i][0];
@@ -61,6 +90,8 @@ element_def
           cls += (cls ? ' ' : '') + val;
         } else if (mod === 'attr') {
           attr += ' ' + val + '=' + mods[i][2];
+        } else if (mod === 'repeat') {
+        } else if (mod === 'repeat_ref') {
         }
       }
       attr += id ? ' id="'+id+'"' : '';
@@ -79,14 +110,10 @@ element_modifier
     { return ['attr', name, text]; }
   / '*' count:int 
     { return ['repeat', count]; }
-//  / '{' interp:interpolation '}'
-//    { return ['interp', interp]; }
   / '*' ref:js_ref
     { return ['repeat_ref', ref]; }
-  / '=' ref:js_ref
-    { return ['include_ref', ref]; }
-  / '&' ref:js_ref
-    { return ['template_ref', ref]; }
+///  / '&' ref:js_ref ( '(' field:js_ref ')' )?
+///    { return ['template_ref', ref, field]; }
 
 element_name
   = name:xml_elem 
