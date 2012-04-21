@@ -6,5 +6,7 @@ $.fn.isTest = function () {
     });
 };
 
+var module = {};
+
 $(function () {
 });
